@@ -1,7 +1,7 @@
-# AgentUp Images
+# AgentUp Image
 
 <p align="center">
-  <img src="static/images_logo.png" alt="AgentUp Images Plugin" width="400"/>
+  <img src="static/images_logo.png" alt="AgentUp Image Plugin" width="400"/>
 </p>
 
 A comprehensive image processing and analysis plugin for the AgentUp framework
