@@ -1,0 +1,55 @@
+
+
+
+[project]
+name = "agentup-image"
+version = "0.1.0"
+description = "Image processing and analysis plugin for AgentUp framework"
+readme = "README.md"
+authors = [
+    { name = "Luke Hinds (Red Dot Rocket)", email = "luke@rdrocket.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "agentup>=0.1.0",
+    "pluggy>=1.5.0",
+    "Pillow>=9.0.0",
+    "numpy>=1.21.0",
+    "structlog>=21.1.0",
+]
+keywords = ["agentup", "plugin", "image", "processing", "analysis", "transformation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Topic :: Multimedia :: Graphics :: Graphics Conversion",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+    "black>=22.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+]
+
+[project.entry-points."agentup.skills"]
+image_processing = "agentup_image.plugin:ImageProcessingPlugin"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sys_tools"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
