@@ -233,90 +233,107 @@ class ImageProcessingPlugin:
             )
 
     @hookimpl
-    def get_ai_functions(self) -> list[AIFunction]:
-        """Get AI functions provided by this plugin."""
-        return [
-            AIFunction(
-                name="analyze_image",
-                description="Analyze an uploaded image and return detailed insights including metadata, dimensions, and visual characteristics",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "analysis_type": {
-                            "type": "string",
-                            "enum": ["basic", "detailed", "color"],
-                            "description": "Type of analysis to perform",
-                        }
+    def get_ai_functions(self, capability_id: str = None) -> list[AIFunction]:
+        """Get AI functions provided by this plugin for a specific capability."""
+        # Map each capability to its specific AI function
+        capability_functions = {
+            "analyze_image": [
+                AIFunction(
+                    name="analyze_image",
+                    description="Analyze an uploaded image and return detailed insights including metadata, dimensions, and visual characteristics",
+                    parameters={
+                        "type": "object",
+                        "properties": {
+                            "analysis_type": {
+                                "type": "string",
+                                "enum": ["basic", "detailed", "color"],
+                                "description": "Type of analysis to perform",
+                            }
+                        },
+                        "required": [],
                     },
-                    "required": [],
-                },
-                handler=self._handle_analyze_image,
-            ),
-            AIFunction(
-                name="transform_image",
-                description="Transform images with various operations like resize, rotate, flip, and apply filters",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "operation": {
-                            "type": "string",
-                            "enum": ["resize", "rotate", "flip", "thumbnail", "filter"],
-                            "description": "Operation to perform on the image",
+                    handler=self._handle_analyze_image,
+                )
+            ],
+            "transform_image": [
+                AIFunction(
+                    name="transform_image",
+                    description="Transform images with various operations like resize, rotate, flip, and apply filters",
+                    parameters={
+                        "type": "object",
+                        "properties": {
+                            "operation": {
+                                "type": "string",
+                                "enum": ["resize", "rotate", "flip", "thumbnail", "filter"],
+                                "description": "Operation to perform on the image",
+                            },
+                            "target_size": {
+                                "type": "string",
+                                "description": "Target size for resize operations (e.g., '800x600')",
+                            },
+                            "degrees": {
+                                "type": "number",
+                                "description": "Degrees to rotate (for rotate operation)",
+                            },
+                            "direction": {
+                                "type": "string",
+                                "enum": ["horizontal", "vertical"],
+                                "description": "Direction to flip (for flip operation)",
+                            },
+                            "filter_name": {
+                                "type": "string",
+                                "enum": [
+                                    "blur",
+                                    "sharpen",
+                                    "edge",
+                                    "emboss",
+                                    "enhance",
+                                    "brightness",
+                                    "contrast",
+                                ],
+                                "description": "Filter to apply (for filter operation)",
+                            },
                         },
-                        "target_size": {
-                            "type": "string",
-                            "description": "Target size for resize operations (e.g., '800x600')",
-                        },
-                        "degrees": {
-                            "type": "number",
-                            "description": "Degrees to rotate (for rotate operation)",
-                        },
-                        "direction": {
-                            "type": "string",
-                            "enum": ["horizontal", "vertical"],
-                            "description": "Direction to flip (for flip operation)",
-                        },
-                        "filter_name": {
-                            "type": "string",
-                            "enum": [
-                                "blur",
-                                "sharpen",
-                                "edge",
-                                "emboss",
-                                "enhance",
-                                "brightness",
-                                "contrast",
-                            ],
-                            "description": "Filter to apply (for filter operation)",
-                        },
+                        "required": ["operation"],
                     },
-                    "required": ["operation"],
-                },
-                handler=self._handle_transform_image,
-            ),
-            AIFunction(
-                name="convert_image_format",
-                description="Convert images between different formats (PNG, JPEG, WebP, etc.)",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "target_format": {
-                            "type": "string",
-                            "enum": ["PNG", "JPEG", "WEBP", "BMP"],
-                            "description": "Target format for conversion",
+                    handler=self._handle_transform_image,
+                )
+            ],
+            "convert_image_format": [
+                AIFunction(
+                    name="convert_image_format",
+                    description="Convert images between different formats (PNG, JPEG, WebP, etc.)",
+                    parameters={
+                        "type": "object",
+                        "properties": {
+                            "target_format": {
+                                "type": "string",
+                                "enum": ["PNG", "JPEG", "WEBP", "BMP"],
+                                "description": "Target format for conversion",
+                            },
+                            "quality": {
+                                "type": "number",
+                                "minimum": 1,
+                                "maximum": 100,
+                                "description": "Quality for JPEG conversion (1-100)",
+                            },
                         },
-                        "quality": {
-                            "type": "number",
-                            "minimum": 1,
-                            "maximum": 100,
-                            "description": "Quality for JPEG conversion (1-100)",
-                        },
+                        "required": ["target_format"],
                     },
-                    "required": ["target_format"],
-                },
-                handler=self._handle_convert_image,
-            ),
-        ]
+                    handler=self._handle_convert_image,
+                )
+            ],
+        }
+        
+        # Return the specific function(s) for this capability
+        if capability_id and capability_id in capability_functions:
+            return capability_functions[capability_id]
+        
+        # Fallback: return all functions (for backward compatibility)
+        all_functions = []
+        for functions in capability_functions.values():
+            all_functions.extend(functions)
+        return all_functions
 
     @hookimpl
     def validate_config(self, config: dict) -> ValidationResult:
