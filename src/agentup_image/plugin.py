@@ -11,10 +11,10 @@ import structlog
 from a2a.types import Task
 from agent.plugins import (
     AIFunction,
-    SkillCapability,
-    SkillContext,
-    SkillInfo,
-    SkillResult,
+    CapabilityType,
+    CapabilityContext,
+    CapabilityInfo,
+    CapabilityResult,
     ValidationResult,
 )
 
@@ -30,7 +30,7 @@ class ImageProcessingPlugin:
     """
     AgentUp plugin for image processing capabilities.
 
-    Provides skills for:
+    Provides capabilities for:
     - Image analysis and metadata extraction
     - Image transformation (resize, rotate, flip, filters)
     - Format conversion
@@ -43,50 +43,73 @@ class ImageProcessingPlugin:
         self.config = {}
 
     @hookimpl
-    def register_skill(self) -> SkillInfo:
-        """Register the image processing skills with AgentUp."""
-        return SkillInfo(
-            id="image_processing",
-            name="Image Processing",
-            version="1.0.0",
-            description="Comprehensive image processing, analysis, and transformation capabilities",
-            capabilities=[SkillCapability.MULTIMODAL, SkillCapability.AI_FUNCTION],
-            input_mode="multimodal",
-            output_mode="text",
-            tags=["image", "processing", "analysis", "transformation", "multimodal"],
-            priority=85,
-            config_schema={
-                "type": "object",
-                "properties": {
-                    "max_image_size_mb": {
-                        "type": "number",
-                        "default": 10,
-                        "description": "Maximum image size in MB",
-                    },
-                    "supported_formats": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "default": [
-                            "image/png",
-                            "image/jpeg",
-                            "image/webp",
-                            "image/gif",
-                            "image/bmp",
-                        ],
-                        "description": "Supported image formats",
-                    },
-                    "default_thumbnail_size": {
-                        "type": "array",
-                        "items": {"type": "integer"},
-                        "default": [200, 200],
-                        "description": "Default thumbnail size [width, height]",
-                    },
+    def register_capability(self) -> list[CapabilityInfo]:
+        """Register the image processing capabilities."""
+        base_config_schema = {
+            "type": "object",
+            "properties": {
+                "max_image_size": {
+                    "type": "integer",
+                    "description": "Maximum image size in bytes",
+                    "default": 10485760
                 },
-            },
-        )
+                "supported_formats": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Supported image formats",
+                    "default": ["JPEG", "PNG", "GIF", "BMP", "TIFF"]
+                },
+                "quality_default": {
+                    "type": "integer",
+                    "description": "Default image quality for compression",
+                    "default": 85,
+                    "minimum": 1,
+                    "maximum": 100
+                }
+            }
+        }
+        
+        return [
+            CapabilityInfo(
+                id="analyze_image",
+                name="Image Analysis",
+                version="1.0.0",
+                description="Analyze images and extract metadata, dimensions, and visual characteristics",
+                plugin_name="agentup_image",
+                capabilities=[CapabilityType.AI_FUNCTION, CapabilityType.MULTIMODAL],
+                input_mode="multimodal",
+                output_mode="text",
+                tags=["image", "analysis", "metadata", "multimodal"],
+                config_schema=base_config_schema
+            ),
+            CapabilityInfo(
+                id="transform_image",
+                name="Image Transformation", 
+                version="1.0.0",
+                description="Transform images with operations like resize, rotate, flip, and apply filters",
+                plugin_name="agentup_image",
+                capabilities=[CapabilityType.AI_FUNCTION, CapabilityType.MULTIMODAL],
+                input_mode="multimodal",
+                output_mode="text",
+                tags=["image", "transformation", "resize", "rotate", "filter", "multimodal"],
+                config_schema=base_config_schema
+            ),
+            CapabilityInfo(
+                id="convert_image_format",
+                name="Image Format Conversion",
+                version="1.0.0", 
+                description="Convert images between different formats (PNG, JPEG, WebP, etc.)",
+                plugin_name="agentup_image",
+                capabilities=[CapabilityType.AI_FUNCTION, CapabilityType.MULTIMODAL],
+                input_mode="multimodal",
+                output_mode="text",
+                tags=["image", "conversion", "format", "multimodal"],
+                config_schema=base_config_schema
+            ),
+        ]
 
     @hookimpl
-    def can_handle_task(self, context: SkillContext) -> float:
+    def can_handle_task(self, context: CapabilityContext) -> float:
         """Check if this plugin can handle the given task."""
         try:
             # Extract user input and check for image-related keywords
@@ -137,60 +160,75 @@ class ImageProcessingPlugin:
             return 0.0
 
     @hookimpl
-    def execute_skill(self, context: SkillContext) -> SkillResult:
-        """Execute the image processing skill."""
+    def execute_capability(self, context: CapabilityContext) -> CapabilityResult:
+        """Execute the image processing capability."""
         try:
-            user_input = self._extract_user_input(context)
-            logger.info(f"Processing image task: {user_input[:100]}...")
+            # Get the specific capability being invoked
+            capability_id = context.metadata.get("capability_id", "unknown")
+            
+            # Route to specific capability handler based on capability_id
+            capability_map = {
+                "analyze_image": self._handle_analyze_image_internal,
+                "transform_image": self._handle_transform_image_internal,
+                "convert_image_format": self._handle_convert_image_internal,
+            }
+            
+            if capability_id in capability_map:
+                handler = capability_map[capability_id]
+                return handler(context)
+            else:
+                # Fallback to legacy operation-based routing for unknown capabilities
+                user_input = self._extract_user_input(context)
+                logger.info(f"Processing image task: {user_input[:100]}...")
 
-            # Extract images from the task
-            if not hasattr(context.task, "history") or not context.task.history:
-                return SkillResult(
-                    content="Error: No message history found. Please provide an image to process.",
-                    success=False,
-                    error="No message history",
-                )
-
-            image_parts = []
-            for message in context.task.history:
-                if hasattr(message, "parts") and message.parts:
-                    image_parts.extend(
-                        ImageProcessor.extract_image_parts(message.parts)
+                # Extract images from the task
+                if not hasattr(context.task, "history") or not context.task.history:
+                    return CapabilityResult(
+                        content="Error: No message history found. Please provide an image to process.",
+                        success=False,
+                        error="No message history",
                     )
 
-            if not image_parts:
-                return SkillResult(
-                    content="Error: No images found in the message. Please upload an image to process.",
-                    success=False,
-                    error="No images found",
-                )
+                image_parts = []
+                for message in context.task.history:
+                    if hasattr(message, "parts") and message.parts:
+                        image_parts.extend(
+                            ImageProcessor.extract_image_parts(message.parts)
+                        )
 
-            # Determine the operation based on user input
-            operation = self._determine_operation(user_input)
+                if not image_parts:
+                    return CapabilityResult(
+                        content="Error: No images found in the message. Please upload an image to process.",
+                        success=False,
+                        error="No images found",
+                    )
 
-            # Process the first image
-            image_part = image_parts[0]
-            if not image_part["data"]:
-                return SkillResult(
-                    content="Error: No image data found. Images must be embedded as base64 data.",
-                    success=False,
-                    error="No image data",
-                )
+                # Determine the operation based on user input
+                operation = self._determine_operation(user_input)
 
-            # Process based on operation
-            if operation == "analyze":
-                return self._analyze_image(image_part, user_input)
-            elif operation == "transform":
-                return self._transform_image(image_part, user_input)
-            elif operation == "convert":
-                return self._convert_image(image_part, user_input)
-            else:
-                # Default to analysis
-                return self._analyze_image(image_part, user_input)
+                # Process the first image
+                image_part = image_parts[0]
+                if not image_part["data"]:
+                    return CapabilityResult(
+                        content="Error: No image data found. Images must be embedded as base64 data.",
+                        success=False,
+                        error="No image data",
+                    )
+
+                # Process based on operation
+                if operation == "analyze":
+                    return self._analyze_image(image_part, user_input)
+                elif operation == "transform":
+                    return self._transform_image(image_part, user_input)
+                elif operation == "convert":
+                    return self._convert_image(image_part, user_input)
+                else:
+                    # Default to analysis
+                    return self._analyze_image(image_part, user_input)
 
         except Exception as e:
-            logger.error(f"Error executing image processing skill: {e}", exc_info=True)
-            return SkillResult(
+            logger.error(f"Error executing image processing capability: {e}", exc_info=True)
+            return CapabilityResult(
                 content=f"Error processing image: {str(e)}", success=False, error=str(e)
             )
 
@@ -325,7 +363,7 @@ class ImageProcessingPlugin:
         self.services = services
         logger.info("Image processing plugin configured with services")
 
-    def _extract_user_input(self, context: SkillContext) -> str:
+    def _extract_user_input(self, context: CapabilityContext) -> str:
         """Extract user input from the task context."""
         if hasattr(context.task, "history") and context.task.history:
             for message in context.task.history:
@@ -356,14 +394,14 @@ class ImageProcessingPlugin:
         else:
             return "analyze"
 
-    def _analyze_image(self, image_part: dict, user_input: str) -> SkillResult:
+    def _analyze_image(self, image_part: dict, user_input: str) -> CapabilityResult:
         """Analyze an image and return insights."""
         result = ImageProcessor.process_image(
             image_part["data"], image_part["mimeType"]
         )
 
         if not result["success"]:
-            return SkillResult(
+            return CapabilityResult(
                 content=f"Error processing image: {result.get('error', 'Unknown error')}",
                 success=False,
                 error=result.get("error", "Unknown error"),
@@ -400,20 +438,20 @@ class ImageProcessingPlugin:
                     f"- RGB Channel Means: R={channels[0]:.1f}, G={channels[1]:.1f}, B={channels[2]:.1f}"
                 )
 
-        return SkillResult(
+        return CapabilityResult(
             content="\n".join(response_parts),
             success=True,
             metadata={"operation": "analyze", "analysis_type": analysis_type},
         )
 
-    def _transform_image(self, image_part: dict, user_input: str) -> SkillResult:
+    def _transform_image(self, image_part: dict, user_input: str) -> CapabilityResult:
         """Transform an image based on user input."""
         result = ImageProcessor.process_image(
             image_part["data"], image_part["mimeType"]
         )
 
         if not result["success"]:
-            return SkillResult(
+            return CapabilityResult(
                 content=f"Error loading image: {result.get('error', 'Unknown error')}",
                 success=False,
                 error=result.get("error", "Unknown error"),
@@ -508,7 +546,7 @@ class ImageProcessingPlugin:
 
             # Encode result
             encoded = ImageProcessor.encode_image_base64(image, "PNG")
-            return SkillResult(
+            return CapabilityResult(
                 content=(
                     f"Image Transformation Complete:\n"
                     f"- {transform_msg}\n"
@@ -521,18 +559,18 @@ class ImageProcessingPlugin:
 
         except Exception as e:
             logger.error(f"Image transformation error: {e}")
-            return SkillResult(
+            return CapabilityResult(
                 content=f"Error during transformation: {e}", success=False, error=str(e)
             )
 
-    def _convert_image(self, image_part: dict, user_input: str) -> SkillResult:
+    def _convert_image(self, image_part: dict, user_input: str) -> CapabilityResult:
         """Convert image format."""
         result = ImageProcessor.process_image(
             image_part["data"], image_part["mimeType"]
         )
 
         if not result["success"]:
-            return SkillResult(
+            return CapabilityResult(
                 content=f"Error loading image: {result.get('error', 'Unknown error')}",
                 success=False,
                 error=result.get("error", "Unknown error"),
@@ -555,7 +593,7 @@ class ImageProcessingPlugin:
 
         try:
             encoded = ImageProcessor.encode_image_base64(image, target_format)
-            return SkillResult(
+            return CapabilityResult(
                 content=(
                     f"Image Format Conversion Complete:\n"
                     f"- Converted to {target_format} format\n"
@@ -571,25 +609,137 @@ class ImageProcessingPlugin:
             )
         except Exception as e:
             logger.error(f"Image conversion error: {e}")
-            return SkillResult(
+            return CapabilityResult(
                 content=f"Error during conversion: {e}", success=False, error=str(e)
             )
 
+    # Internal capability handlers for routing
+    def _handle_analyze_image_internal(self, context: CapabilityContext) -> CapabilityResult:
+        """Handle analyze_image capability internally."""
+        user_input = self._extract_user_input(context)
+        
+        # Extract images from the task
+        if not hasattr(context.task, "history") or not context.task.history:
+            return CapabilityResult(
+                content="Error: No message history found. Please provide an image to process.",
+                success=False,
+                error="No message history",
+            )
+
+        image_parts = []
+        for message in context.task.history:
+            if hasattr(message, "parts") and message.parts:
+                image_parts.extend(
+                    ImageProcessor.extract_image_parts(message.parts)
+                )
+
+        if not image_parts:
+            return CapabilityResult(
+                content="Error: No images found in the message. Please upload an image to process.",
+                success=False,
+                error="No images found",
+            )
+
+        # Process the first image
+        image_part = image_parts[0]
+        if not image_part["data"]:
+            return CapabilityResult(
+                content="Error: No image data found. Images must be embedded as base64 data.",
+                success=False,
+                error="No image data",
+            )
+
+        return self._analyze_image(image_part, user_input)
+
+    def _handle_transform_image_internal(self, context: CapabilityContext) -> CapabilityResult:
+        """Handle transform_image capability internally."""
+        user_input = self._extract_user_input(context)
+        
+        # Extract images from the task
+        if not hasattr(context.task, "history") or not context.task.history:
+            return CapabilityResult(
+                content="Error: No message history found. Please provide an image to process.",
+                success=False,
+                error="No message history",
+            )
+
+        image_parts = []
+        for message in context.task.history:
+            if hasattr(message, "parts") and message.parts:
+                image_parts.extend(
+                    ImageProcessor.extract_image_parts(message.parts)
+                )
+
+        if not image_parts:
+            return CapabilityResult(
+                content="Error: No images found in the message. Please upload an image to process.",
+                success=False,
+                error="No images found",
+            )
+
+        # Process the first image
+        image_part = image_parts[0]
+        if not image_part["data"]:
+            return CapabilityResult(
+                content="Error: No image data found. Images must be embedded as base64 data.",
+                success=False,
+                error="No image data",
+            )
+
+        return self._transform_image(image_part, user_input)
+
+    def _handle_convert_image_internal(self, context: CapabilityContext) -> CapabilityResult:
+        """Handle convert_image_format capability internally."""
+        user_input = self._extract_user_input(context)
+        
+        # Extract images from the task
+        if not hasattr(context.task, "history") or not context.task.history:
+            return CapabilityResult(
+                content="Error: No message history found. Please provide an image to process.",
+                success=False,
+                error="No message history",
+            )
+
+        image_parts = []
+        for message in context.task.history:
+            if hasattr(message, "parts") and message.parts:
+                image_parts.extend(
+                    ImageProcessor.extract_image_parts(message.parts)
+                )
+
+        if not image_parts:
+            return CapabilityResult(
+                content="Error: No images found in the message. Please upload an image to process.",
+                success=False,
+                error="No images found",
+            )
+
+        # Process the first image
+        image_part = image_parts[0]
+        if not image_part["data"]:
+            return CapabilityResult(
+                content="Error: No image data found. Images must be embedded as base64 data.",
+                success=False,
+                error="No image data",
+            )
+
+        return self._convert_image(image_part, user_input)
+
     # AI Function handlers
     async def _handle_analyze_image(
-        self, task: Task, context: SkillContext
-    ) -> SkillResult:
+        self, task: Task, context: CapabilityContext
+    ) -> CapabilityResult:
         """Handle AI function call for image analysis."""
-        return self.execute_skill(context)
+        return self._handle_analyze_image_internal(context)
 
     async def _handle_transform_image(
-        self, task: Task, context: SkillContext
-    ) -> SkillResult:
+        self, task: Task, context: CapabilityContext
+    ) -> CapabilityResult:
         """Handle AI function call for image transformation."""
-        return self.execute_skill(context)
+        return self._handle_transform_image_internal(context)
 
     async def _handle_convert_image(
-        self, task: Task, context: SkillContext
-    ) -> SkillResult:
+        self, task: Task, context: CapabilityContext
+    ) -> CapabilityResult:
         """Handle AI function call for image format conversion."""
-        return self.execute_skill(context)
+        return self._handle_convert_image_internal(context)

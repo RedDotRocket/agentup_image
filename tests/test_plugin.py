@@ -38,8 +38,8 @@ class MockPart:
             self.root.file.name = content.get("name") if content else "image.png"
 
 
-class MockSkillContext:
-    """Mock skill context for testing."""
+class MockCapabilityContext:
+    """Mock capability context for testing."""
 
     def __init__(self, task, config=None):
         self.task = task
@@ -76,7 +76,7 @@ class TestImageProcessingPlugin:
         message = MockMessage([text_part, image_part])
         task = MockTask([message])
 
-        return MockSkillContext(task)
+        return MockCapabilityContext(task)
 
     @pytest.fixture
     def mock_context_text_only(self):
@@ -85,19 +85,19 @@ class TestImageProcessingPlugin:
         message = MockMessage([text_part])
         task = MockTask([message])
 
-        return MockSkillContext(task)
+        return MockCapabilityContext(task)
 
-    def test_register_skill(self, plugin):
-        """Test skill registration."""
-        skill_info = plugin.register_skill()
+    def test_register_capability(self, plugin):
+        """Test capability registration."""
+        capability_info = plugin.register_capability()
 
-        assert skill_info.id == "image_processing"
-        assert skill_info.name == "Image Processing"
-        assert skill_info.version == "1.0.0"
-        assert "multimodal" in skill_info.capabilities
-        assert "ai_function" in skill_info.capabilities
-        assert skill_info.input_mode == "multimodal"
-        assert skill_info.output_mode == "text"
+        assert capability_info.id == "agentup_image"
+        assert capability_info.name == "Image Processing"
+        assert capability_info.version == "1.0.0"
+        assert "multimodal" in [cap.value for cap in capability_info.capabilities]
+        assert "ai_function" in [cap.value for cap in capability_info.capabilities]
+        assert capability_info.input_mode == "multimodal"
+        assert capability_info.output_mode == "text"
 
     def test_can_handle_task_with_images(self, plugin, mock_context_with_image):
         """Test task handling with images present."""
@@ -118,35 +118,35 @@ class TestImageProcessingPlugin:
         text_part = MockPart("text", "hello world")
         message = MockMessage([text_part])
         task = MockTask([message])
-        context = MockSkillContext(task)
+        context = MockCapabilityContext(task)
 
         confidence = plugin.can_handle_task(context)
 
         # Should have low confidence
         assert confidence == 0.0
 
-    def test_execute_skill_analyze(self, plugin, mock_context_with_image):
-        """Test skill execution for image analysis."""
-        result = plugin.execute_skill(mock_context_with_image)
+    def test_execute_capability_analyze(self, plugin, mock_context_with_image):
+        """Test capability execution for image analysis."""
+        result = plugin.execute_capability(mock_context_with_image)
 
         assert result.success is True
         assert "Image Analysis Results:" in result.content
         assert "Format:" in result.content
         assert "Dimensions:" in result.content
 
-    def test_execute_skill_no_images(self, plugin, mock_context_text_only):
-        """Test skill execution with no images."""
-        result = plugin.execute_skill(mock_context_text_only)
+    def test_execute_capability_no_images(self, plugin, mock_context_text_only):
+        """Test capability execution with no images."""
+        result = plugin.execute_capability(mock_context_text_only)
 
         assert result.success is False
         assert "No images found" in result.content
 
-    def test_execute_skill_no_history(self, plugin):
-        """Test skill execution with no message history."""
+    def test_execute_capability_no_history(self, plugin):
+        """Test capability execution with no message history."""
         task = MockTask([])
-        context = MockSkillContext(task)
+        context = MockCapabilityContext(task)
 
-        result = plugin.execute_skill(context)
+        result = plugin.execute_capability(context)
 
         assert result.success is False
         assert "No message history found" in result.content
@@ -251,7 +251,7 @@ class TestImageProcessingPlugin:
         """Test extracting user input with no text parts."""
         message = MockMessage([])
         task = MockTask([message])
-        context = MockSkillContext(task)
+        context = MockCapabilityContext(task)
 
         user_input = plugin._extract_user_input(context)
 

@@ -52,8 +52,8 @@ pip install agentup-image-processing
 Add the plugin to your agent's configuration in `agent_config.yaml`:
 
 ```yaml
-skills:
-  - skill_id: image_processing
+plugins:
+  - plugin_id: agentup_image
     name: Image Processing
     description: Process and analyze images
     tags: [image, processing, analysis]
@@ -62,7 +62,7 @@ skills:
     priority: 85
 
 services:
-  image_processing:
+  agentup_image:
     type: plugin
     enabled: true
     config:
@@ -209,13 +209,13 @@ Converts images between different formats.
 
 ```yaml
 services:
-  image_processing:
+  agentup_image:
     type: plugin
     enabled: true
     config:
       # Maximum image size in MB
       max_image_size_mb: 10
-      
+
       # Supported image formats
       supported_formats:
         - "image/png"
@@ -223,7 +223,7 @@ services:
         - "image/webp"
         - "image/gif"
         - "image/bmp"
-      
+
       # Default thumbnail size [width, height]
       default_thumbnail_size: [200, 200]
 ```
