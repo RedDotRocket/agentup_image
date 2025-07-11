@@ -26,6 +26,115 @@ logger = structlog.get_logger(__name__)
 hookimpl = pluggy.HookimplMarker("agentup")
 
 
+# Image processing capabilities configuration
+CAPABILITIES_CONFIG = [
+    {
+        "id": "analyze_image",
+        "name": "Image Analysis",
+        "description": "Analyze images and extract metadata, dimensions, and visual characteristics",
+        "capabilities": [CapabilityType.AI_FUNCTION, CapabilityType.MULTIMODAL],
+        "input_mode": "multimodal",
+        "output_mode": "text",
+        "tags": ["image", "analysis", "metadata", "multimodal"],
+        "ai_function": {
+            "name": "analyze_image",
+            "description": "Analyze an uploaded image and return detailed insights including metadata, dimensions, and visual characteristics",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "analysis_type": {
+                        "type": "string",
+                        "enum": ["basic", "detailed", "color"],
+                        "description": "Type of analysis to perform",
+                    }
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "id": "transform_image",
+        "name": "Image Transformation",
+        "description": "Transform images with operations like resize, rotate, flip, and apply filters",
+        "capabilities": [CapabilityType.AI_FUNCTION, CapabilityType.MULTIMODAL],
+        "input_mode": "multimodal",
+        "output_mode": "text",
+        "tags": ["image", "transformation", "resize", "rotate", "filter", "multimodal"],
+        "ai_function": {
+            "name": "transform_image",
+            "description": "Transform images with various operations like resize, rotate, flip, and apply filters",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": ["resize", "rotate", "flip", "thumbnail", "filter"],
+                        "description": "Operation to perform on the image",
+                    },
+                    "target_size": {
+                        "type": "string",
+                        "description": "Target size for resize operations (e.g., '800x600')",
+                    },
+                    "degrees": {
+                        "type": "number",
+                        "description": "Degrees to rotate (for rotate operation)",
+                    },
+                    "direction": {
+                        "type": "string",
+                        "enum": ["horizontal", "vertical"],
+                        "description": "Direction to flip (for flip operation)",
+                    },
+                    "filter_name": {
+                        "type": "string",
+                        "enum": [
+                            "blur",
+                            "sharpen",
+                            "edge",
+                            "emboss",
+                            "enhance",
+                            "brightness",
+                            "contrast",
+                        ],
+                        "description": "Filter to apply (for filter operation)",
+                    },
+                },
+                "required": ["operation"],
+            },
+        },
+    },
+    {
+        "id": "convert_image_format",
+        "name": "Image Format Conversion",
+        "description": "Convert images between different formats (PNG, JPEG, WebP, etc.)",
+        "capabilities": [CapabilityType.AI_FUNCTION, CapabilityType.MULTIMODAL],
+        "input_mode": "multimodal",
+        "output_mode": "text",
+        "tags": ["image", "conversion", "format", "multimodal"],
+        "ai_function": {
+            "name": "convert_image_format",
+            "description": "Convert images between different formats (PNG, JPEG, WebP, etc.)",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "target_format": {
+                        "type": "string",
+                        "enum": ["PNG", "JPEG", "WEBP", "BMP"],
+                        "description": "Target format for conversion",
+                    },
+                    "quality": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 100,
+                        "description": "Quality for JPEG conversion (1-100)",
+                    },
+                },
+                "required": ["target_format"],
+            },
+        },
+    },
+]
+
+
 class ImageProcessingPlugin:
     """
     AgentUp plugin for image processing capabilities.
@@ -41,11 +150,16 @@ class ImageProcessingPlugin:
         """Initialize the image processing plugin."""
         self.processor = ImageProcessor()
         self.config = {}
+        
+        # Build handler mapping from configuration
+        self._handlers = {
+            config["id"]: self._create_capability_handler(config["id"])
+            for config in CAPABILITIES_CONFIG
+        }
 
-    @hookimpl
-    def register_capability(self) -> list[CapabilityInfo]:
-        """Register the image processing capabilities."""
-        base_config_schema = {
+    def _create_base_config_schema(self) -> dict:
+        """Create the base configuration schema shared across capabilities."""
+        return {
             "type": "object",
             "properties": {
                 "max_image_size": {
@@ -68,45 +182,35 @@ class ImageProcessingPlugin:
                 }
             }
         }
-        
-        return [
-            CapabilityInfo(
-                id="analyze_image",
-                name="Image Analysis",
-                version="1.0.0",
-                description="Analyze images and extract metadata, dimensions, and visual characteristics",
-                plugin_name="agentup_image",
-                capabilities=[CapabilityType.AI_FUNCTION, CapabilityType.MULTIMODAL],
-                input_mode="multimodal",
-                output_mode="text",
-                tags=["image", "analysis", "metadata", "multimodal"],
-                config_schema=base_config_schema
-            ),
-            CapabilityInfo(
-                id="transform_image",
-                name="Image Transformation", 
-                version="1.0.0",
-                description="Transform images with operations like resize, rotate, flip, and apply filters",
-                plugin_name="agentup_image",
-                capabilities=[CapabilityType.AI_FUNCTION, CapabilityType.MULTIMODAL],
-                input_mode="multimodal",
-                output_mode="text",
-                tags=["image", "transformation", "resize", "rotate", "filter", "multimodal"],
-                config_schema=base_config_schema
-            ),
-            CapabilityInfo(
-                id="convert_image_format",
-                name="Image Format Conversion",
-                version="1.0.0", 
-                description="Convert images between different formats (PNG, JPEG, WebP, etc.)",
-                plugin_name="agentup_image",
-                capabilities=[CapabilityType.AI_FUNCTION, CapabilityType.MULTIMODAL],
-                input_mode="multimodal",
-                output_mode="text",
-                tags=["image", "conversion", "format", "multimodal"],
-                config_schema=base_config_schema
-            ),
-        ]
+
+    def _create_capability_info(self, config: dict) -> CapabilityInfo:
+        """Create a CapabilityInfo object from configuration."""
+        return CapabilityInfo(
+            id=config["id"],
+            name=config["name"],
+            version="1.0.0",
+            description=config["description"],
+            plugin_name="agentup_image",
+            capabilities=config["capabilities"],
+            input_mode=config.get("input_mode"),
+            output_mode=config.get("output_mode"),
+            tags=config["tags"],
+            config_schema=self._create_base_config_schema()
+        )
+
+    def _create_capability_handler(self, capability_id: str):
+        """Create a capability handler function."""
+        handler_map = {
+            "analyze_image": self._handle_analyze_image_internal,
+            "transform_image": self._handle_transform_image_internal,
+            "convert_image_format": self._handle_convert_image_internal,
+        }
+        return handler_map[capability_id]
+
+    @hookimpl
+    def register_capability(self) -> list[CapabilityInfo]:
+        """Register the image processing capabilities."""
+        return [self._create_capability_info(config) for config in CAPABILITIES_CONFIG]
 
     @hookimpl
     def can_handle_task(self, context: CapabilityContext) -> float:
@@ -166,15 +270,9 @@ class ImageProcessingPlugin:
             # Get the specific capability being invoked
             capability_id = context.metadata.get("capability_id", "unknown")
             
-            # Route to specific capability handler based on capability_id
-            capability_map = {
-                "analyze_image": self._handle_analyze_image_internal,
-                "transform_image": self._handle_transform_image_internal,
-                "convert_image_format": self._handle_convert_image_internal,
-            }
-            
-            if capability_id in capability_map:
-                handler = capability_map[capability_id]
+            # Route to specific capability handler using the handlers mapping
+            if capability_id in self._handlers:
+                handler = self._handlers[capability_id]
                 return handler(context)
             else:
                 # Fallback to legacy operation-based routing for unknown capabilities
@@ -232,108 +330,35 @@ class ImageProcessingPlugin:
                 content=f"Error processing image: {str(e)}", success=False, error=str(e)
             )
 
+    def _create_ai_function(self, config: dict) -> AIFunction:
+        """Create an AIFunction from configuration."""
+        ai_func_config = config["ai_function"]
+        # Map capability IDs to their AI function handlers
+        handler_map = {
+            "analyze_image": self._handle_analyze_image,
+            "transform_image": self._handle_transform_image,
+            "convert_image_format": self._handle_convert_image,
+        }
+        
+        return AIFunction(
+            name=ai_func_config["name"],
+            description=ai_func_config["description"],
+            parameters=ai_func_config["parameters"],
+            handler=handler_map[config["id"]],
+        )
+
     @hookimpl
     def get_ai_functions(self, capability_id: str = None) -> list[AIFunction]:
         """Get AI functions provided by this plugin for a specific capability."""
-        # Map each capability to its specific AI function
-        capability_functions = {
-            "analyze_image": [
-                AIFunction(
-                    name="analyze_image",
-                    description="Analyze an uploaded image and return detailed insights including metadata, dimensions, and visual characteristics",
-                    parameters={
-                        "type": "object",
-                        "properties": {
-                            "analysis_type": {
-                                "type": "string",
-                                "enum": ["basic", "detailed", "color"],
-                                "description": "Type of analysis to perform",
-                            }
-                        },
-                        "required": [],
-                    },
-                    handler=self._handle_analyze_image,
-                )
-            ],
-            "transform_image": [
-                AIFunction(
-                    name="transform_image",
-                    description="Transform images with various operations like resize, rotate, flip, and apply filters",
-                    parameters={
-                        "type": "object",
-                        "properties": {
-                            "operation": {
-                                "type": "string",
-                                "enum": ["resize", "rotate", "flip", "thumbnail", "filter"],
-                                "description": "Operation to perform on the image",
-                            },
-                            "target_size": {
-                                "type": "string",
-                                "description": "Target size for resize operations (e.g., '800x600')",
-                            },
-                            "degrees": {
-                                "type": "number",
-                                "description": "Degrees to rotate (for rotate operation)",
-                            },
-                            "direction": {
-                                "type": "string",
-                                "enum": ["horizontal", "vertical"],
-                                "description": "Direction to flip (for flip operation)",
-                            },
-                            "filter_name": {
-                                "type": "string",
-                                "enum": [
-                                    "blur",
-                                    "sharpen",
-                                    "edge",
-                                    "emboss",
-                                    "enhance",
-                                    "brightness",
-                                    "contrast",
-                                ],
-                                "description": "Filter to apply (for filter operation)",
-                            },
-                        },
-                        "required": ["operation"],
-                    },
-                    handler=self._handle_transform_image,
-                )
-            ],
-            "convert_image_format": [
-                AIFunction(
-                    name="convert_image_format",
-                    description="Convert images between different formats (PNG, JPEG, WebP, etc.)",
-                    parameters={
-                        "type": "object",
-                        "properties": {
-                            "target_format": {
-                                "type": "string",
-                                "enum": ["PNG", "JPEG", "WEBP", "BMP"],
-                                "description": "Target format for conversion",
-                            },
-                            "quality": {
-                                "type": "number",
-                                "minimum": 1,
-                                "maximum": 100,
-                                "description": "Quality for JPEG conversion (1-100)",
-                            },
-                        },
-                        "required": ["target_format"],
-                    },
-                    handler=self._handle_convert_image,
-                )
-            ],
-        }
+        # Return the specific function for this capability
+        if capability_id:
+            config = next((c for c in CAPABILITIES_CONFIG if c["id"] == capability_id), None)
+            if config:
+                return [self._create_ai_function(config)]
+            return []
         
-        # Return the specific function(s) for this capability
-        if capability_id and capability_id in capability_functions:
-            return capability_functions[capability_id]
-        
-        # Fallback: return all functions (for backward compatibility)
-        all_functions = []
-        for functions in capability_functions.values():
-            all_functions.extend(functions)
-        return all_functions
+        # Return all functions (for backward compatibility)
+        return [self._create_ai_function(config) for config in CAPABILITIES_CONFIG]
 
     @hookimpl
     def validate_config(self, config: dict) -> ValidationResult:
@@ -410,6 +435,31 @@ class ImageProcessingPlugin:
             return "transform"
         else:
             return "analyze"
+
+    def _extract_image_from_context(self, context: CapabilityContext) -> tuple[dict | None, str]:
+        """Extract image data from context. Returns (image_part, user_input) or (None, error_msg)."""
+        user_input = self._extract_user_input(context)
+        
+        # Extract images from the task
+        if not hasattr(context.task, "history") or not context.task.history:
+            return None, "Error: No message history found. Please provide an image to process."
+
+        image_parts = []
+        for message in context.task.history:
+            if hasattr(message, "parts") and message.parts:
+                image_parts.extend(
+                    ImageProcessor.extract_image_parts(message.parts)
+                )
+
+        if not image_parts:
+            return None, "Error: No images found in the message. Please upload an image to process."
+
+        # Process the first image
+        image_part = image_parts[0]
+        if not image_part["data"]:
+            return None, "Error: No image data found. Images must be embedded as base64 data."
+            
+        return image_part, user_input
 
     def _analyze_image(self, image_part: dict, user_input: str) -> CapabilityResult:
         """Analyze an image and return insights."""
@@ -633,114 +683,36 @@ class ImageProcessingPlugin:
     # Internal capability handlers for routing
     def _handle_analyze_image_internal(self, context: CapabilityContext) -> CapabilityResult:
         """Handle analyze_image capability internally."""
-        user_input = self._extract_user_input(context)
-        
-        # Extract images from the task
-        if not hasattr(context.task, "history") or not context.task.history:
+        image_part, user_input_or_error = self._extract_image_from_context(context)
+        if image_part is None:
             return CapabilityResult(
-                content="Error: No message history found. Please provide an image to process.",
+                content=user_input_or_error,
                 success=False,
-                error="No message history",
+                error="Image extraction failed",
             )
-
-        image_parts = []
-        for message in context.task.history:
-            if hasattr(message, "parts") and message.parts:
-                image_parts.extend(
-                    ImageProcessor.extract_image_parts(message.parts)
-                )
-
-        if not image_parts:
-            return CapabilityResult(
-                content="Error: No images found in the message. Please upload an image to process.",
-                success=False,
-                error="No images found",
-            )
-
-        # Process the first image
-        image_part = image_parts[0]
-        if not image_part["data"]:
-            return CapabilityResult(
-                content="Error: No image data found. Images must be embedded as base64 data.",
-                success=False,
-                error="No image data",
-            )
-
-        return self._analyze_image(image_part, user_input)
+        return self._analyze_image(image_part, user_input_or_error)
 
     def _handle_transform_image_internal(self, context: CapabilityContext) -> CapabilityResult:
         """Handle transform_image capability internally."""
-        user_input = self._extract_user_input(context)
-        
-        # Extract images from the task
-        if not hasattr(context.task, "history") or not context.task.history:
+        image_part, user_input_or_error = self._extract_image_from_context(context)
+        if image_part is None:
             return CapabilityResult(
-                content="Error: No message history found. Please provide an image to process.",
+                content=user_input_or_error,
                 success=False,
-                error="No message history",
+                error="Image extraction failed",
             )
-
-        image_parts = []
-        for message in context.task.history:
-            if hasattr(message, "parts") and message.parts:
-                image_parts.extend(
-                    ImageProcessor.extract_image_parts(message.parts)
-                )
-
-        if not image_parts:
-            return CapabilityResult(
-                content="Error: No images found in the message. Please upload an image to process.",
-                success=False,
-                error="No images found",
-            )
-
-        # Process the first image
-        image_part = image_parts[0]
-        if not image_part["data"]:
-            return CapabilityResult(
-                content="Error: No image data found. Images must be embedded as base64 data.",
-                success=False,
-                error="No image data",
-            )
-
-        return self._transform_image(image_part, user_input)
+        return self._transform_image(image_part, user_input_or_error)
 
     def _handle_convert_image_internal(self, context: CapabilityContext) -> CapabilityResult:
         """Handle convert_image_format capability internally."""
-        user_input = self._extract_user_input(context)
-        
-        # Extract images from the task
-        if not hasattr(context.task, "history") or not context.task.history:
+        image_part, user_input_or_error = self._extract_image_from_context(context)
+        if image_part is None:
             return CapabilityResult(
-                content="Error: No message history found. Please provide an image to process.",
+                content=user_input_or_error,
                 success=False,
-                error="No message history",
+                error="Image extraction failed",
             )
-
-        image_parts = []
-        for message in context.task.history:
-            if hasattr(message, "parts") and message.parts:
-                image_parts.extend(
-                    ImageProcessor.extract_image_parts(message.parts)
-                )
-
-        if not image_parts:
-            return CapabilityResult(
-                content="Error: No images found in the message. Please upload an image to process.",
-                success=False,
-                error="No images found",
-            )
-
-        # Process the first image
-        image_part = image_parts[0]
-        if not image_part["data"]:
-            return CapabilityResult(
-                content="Error: No image data found. Images must be embedded as base64 data.",
-                success=False,
-                error="No image data",
-            )
-
-        return self._convert_image(image_part, user_input)
+        return self._convert_image(image_part, user_input_or_error)
 
     # AI Function handlers
     async def _handle_analyze_image(

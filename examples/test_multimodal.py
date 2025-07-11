@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test multi-modal capabilities of AgentUp Images Plugin.
+Test multi-modal capabilities of AgentUp agent.
 
 Usage:
     python test_multimodal.py <image_file> [prompt]
@@ -9,13 +9,12 @@ Example:
     python test_multimodal.py cat.jpg "What animal is in this image?"
 """
 
+import requests
 import base64
 import json
-import os
 import sys
 from pathlib import Path
-
-import requests
+import os
 
 # Enable debug mode with environment variable
 DEBUG = os.getenv('DEBUG', '').lower() in ('1', 'true', 'yes')
