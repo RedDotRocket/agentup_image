@@ -6,7 +6,7 @@ from unittest.mock import Mock
 import pytest
 from PIL import Image
 
-from agentup_image.plugin import ImageProcessingPlugin
+from image_vision.plugin import ImageProcessingPlugin
 
 
 class MockTask:
@@ -41,9 +41,10 @@ class MockPart:
 class MockCapabilityContext:
     """Mock capability context for testing."""
 
-    def __init__(self, task, config=None):
+    def __init__(self, task, config=None, metadata=None):
         self.task = task
         self.config = config or {}
+        self.metadata = metadata or {}
 
 
 class TestImageProcessingPlugin:
@@ -76,7 +77,7 @@ class TestImageProcessingPlugin:
         message = MockMessage([text_part, image_part])
         task = MockTask([message])
 
-        return MockCapabilityContext(task)
+        return MockCapabilityContext(task, metadata={})
 
     @pytest.fixture
     def mock_context_text_only(self):
@@ -85,19 +86,22 @@ class TestImageProcessingPlugin:
         message = MockMessage([text_part])
         task = MockTask([message])
 
-        return MockCapabilityContext(task)
+        return MockCapabilityContext(task, metadata={})
 
     def test_register_capability(self, plugin):
         """Test capability registration."""
-        capability_info = plugin.register_capability()
+        capabilities = plugin.register_capability()
 
-        assert capability_info.id == "agentup_image"
-        assert capability_info.name == "Image Processing"
-        assert capability_info.version == "1.0.0"
-        assert "multimodal" in [cap.value for cap in capability_info.capabilities]
-        assert "ai_function" in [cap.value for cap in capability_info.capabilities]
-        assert capability_info.input_mode == "multimodal"
-        assert capability_info.output_mode == "text"
+        # Should return a list of capabilities
+        assert isinstance(capabilities, list)
+        assert len(capabilities) == 3  # analyze_image, transform_image, convert_image_format
+        
+        # Check first capability (analyze_image)
+        analyze_capability = capabilities[0]
+        assert analyze_capability.id == "analyze_image"
+        assert analyze_capability.name == "Image Analysis"
+        assert "multimodal" in [cap.value for cap in analyze_capability.capabilities]
+        assert "ai_function" in [cap.value for cap in analyze_capability.capabilities]
 
     def test_can_handle_task_with_images(self, plugin, mock_context_with_image):
         """Test task handling with images present."""
@@ -118,7 +122,7 @@ class TestImageProcessingPlugin:
         text_part = MockPart("text", "hello world")
         message = MockMessage([text_part])
         task = MockTask([message])
-        context = MockCapabilityContext(task)
+        context = MockCapabilityContext(task, metadata={})
 
         confidence = plugin.can_handle_task(context)
 
@@ -144,7 +148,7 @@ class TestImageProcessingPlugin:
     def test_execute_capability_no_history(self, plugin):
         """Test capability execution with no message history."""
         task = MockTask([])
-        context = MockCapabilityContext(task)
+        context = MockCapabilityContext(task, metadata={})
 
         result = plugin.execute_capability(context)
 
@@ -251,7 +255,7 @@ class TestImageProcessingPlugin:
         """Test extracting user input with no text parts."""
         message = MockMessage([])
         task = MockTask([message])
-        context = MockCapabilityContext(task)
+        context = MockCapabilityContext(task, metadata={})
 
         user_input = plugin._extract_user_input(context)
 

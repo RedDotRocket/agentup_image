@@ -190,7 +190,7 @@ class ImageProcessingPlugin:
             name=config["name"],
             version="1.0.0",
             description=config["description"],
-            plugin_name="agentup_image",
+            plugin_name="image_vision",
             capabilities=config["capabilities"],
             input_mode=config.get("input_mode"),
             output_mode=config.get("output_mode"),

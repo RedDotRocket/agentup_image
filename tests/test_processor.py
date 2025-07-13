@@ -5,7 +5,7 @@ import io
 import pytest
 from PIL import Image
 
-from agentup_image.processor import ImageProcessor
+from image_vision.processor import ImageProcessor
 
 
 class TestImageProcessor:

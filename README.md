@@ -28,14 +28,14 @@ This works with local models, but I only tested llava:7b so far, running on Olla
 ### From PyPI (Recommended)
 
 ```bash
-pip install agentup-image-processing
+pip install image-vision
 ```
 
 ### From Source
 
 ```bash
-git clone https://github.com/RedDotRocket/agentup-image-processing.git
-cd agentup-image-processing
+git clone https://github.com/RedDotRocket/image-vision.git
+cd image-vision
 pip install -e .
 ```
 
@@ -44,7 +44,7 @@ pip install -e .
 ### 1. Install the Plugin
 
 ```bash
-pip install agentup-image-processing
+pip install image-vision
 ```
 
 ### 2. Configure Your Agent
@@ -53,27 +53,13 @@ Add the plugin to your agent's configuration in `agent_config.yaml`:
 
 ```yaml
 plugins:
-  - plugin_id: agentup_image
+  - plugin_id: image-vision
     name: Image Processing
     description: Process and analyze images
     tags: [image, processing, analysis]
     input_mode: multimodal
     output_mode: text
     priority: 85
-
-services:
-  agentup_image:
-    type: plugin
-    enabled: true
-    config:
-      max_image_size_mb: 10
-      supported_formats:
-        - "image/png"
-        - "image/jpeg"
-        - "image/webp"
-        - "image/gif"
-        - "image/bmp"
-      default_thumbnail_size: [200, 200]
 ```
 
 ### 3. Use in Your Agent
@@ -209,7 +195,7 @@ Converts images between different formats.
 
 ```yaml
 services:
-  agentup_image:
+  image_vision:
     type: plugin
     enabled: true
     config:
@@ -273,8 +259,8 @@ services:
 ### Setting Up Development Environment
 
 ```bash
-git clone https://github.com/agentup-ai/agentup-image-processing.git
-cd agentup-image-processing
+git clone https://github.com/agentup-ai/image-vision.git
+cd image-vision
 
 # Install in development mode
 pip install -e .[dev]
@@ -296,7 +282,7 @@ black src/
 pytest
 
 # Run with coverage
-pytest --cov=agentup_image
+pytest --cov=image_vision
 
 # Run specific test file
 pytest tests/test_processor.py
@@ -305,9 +291,9 @@ pytest tests/test_processor.py
 ### Project Structure
 
 ```
-agentup-image-processing/
+image-vision/
 ├── src/
-│   └── agentup_image/
+│   └── image_vision/
 │       ├── __init__.py
 │       ├── plugin.py          # Main plugin implementation
 │       └── processor.py       # Image processing utilities
@@ -390,8 +376,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Support
 
 - **Documentation**: [https://docs.agentup.dev/plugins/image-processing](https://docs.agentup.dev/plugins/image-processing)
-- **Issues**: [GitHub Issues](https://github.com/agentup-ai/agentup-image-processing/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/agentup-ai/agentup-image-processing/discussions)
+- **Issues**: [GitHub Issues](https://github.com/RedDotRocket/image-vision/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/RedDotRocket/image-visiong/discussions)
 
 ## Changelog
 
@@ -404,8 +390,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Related Projects
 
-- [AgentUp Framework](https://github.com/agentup-ai/agentup) - The main AgentUp framework
-- [AgentUp Document Processing](https://github.com/agentup-ai/agentup-document-processing) - Document processing plugin
+- [AgentUp Framework](https://github.com/RedDoctRocket/agentup) - The main AgentUp framework
+- [AgentUp Document Processing](https://github.com/RedDotRocket/image-vision) - Document processing plugin
 - [A2A SDK](https://github.com/a2a-ai/a2a-sdk) - A2A protocol implementation
 
 ---

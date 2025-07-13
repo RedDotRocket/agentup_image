@@ -19,6 +19,18 @@ import os
 # Enable debug mode with environment variable
 DEBUG = os.getenv('DEBUG', '').lower() in ('1', 'true', 'yes')
 
+def resolve_image_path(image_path):
+    p = Path(image_path)
+    if p.exists():
+        return p
+
+    # fall back to “same folder as script”
+    script_dir = Path(__file__).resolve().parent
+    p2 = script_dir / image_path
+    if p2.exists():
+        return p2
+
+    return p  # original, so your existing “not found” message still applies
 
 def test_multimodal(image_path, prompt="What do you see in this image? Please describe it in detail."):
     """Test multi-modal agent with an image."""
@@ -207,14 +219,24 @@ if __name__ == "__main__":
     if sys.argv[1] == "--test-text":
         # Test text-only first
         test_text_only()
-    else:
-        # First try text-only to verify connectivity
-        print("Testing connectivity with text-only request first...\n")
-        if test_text_only("echo test"):
-            print("\n" + "="*50 + "\n")
+        sys.exit(0)
 
-        # Then test multi-modal
-        image_file = sys.argv[1]
-        prompt = sys.argv[2] if len(sys.argv) > 2 else "What do you see in this image? Please describe it in detail."
+    # Resolve the image path (cwd or script directory)
+    image_arg = sys.argv[1]
+    image_path = resolve_image_path(image_arg)
+    if not image_path.exists():
+        print(f"Error: Image file '{image_arg}' not found")
+        sys.exit(1)
 
-        test_multimodal(image_file, prompt)
+    # Optional prompt
+    prompt = sys.argv[2] if len(sys.argv) > 2 else (
+        "What do you see in this image? Please describe it in detail."
+    )
+
+    # First verify connectivity via text-only
+    print("Testing connectivity with text-only request first...\n")
+    if test_text_only("echo test"):
+        print("\n" + "=" * 50 + "\n")
+
+    # Then test multi-modal
+    test_multimodal(str(image_path), prompt)
