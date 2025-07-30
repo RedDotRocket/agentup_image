@@ -14,6 +14,15 @@ You will need to use a model that supports multimodal requests, such as `gpt-4-t
 
 This works with local models, but I only tested llava:7b so far, running on Ollama.
 
+### Required Scopes
+
+This plugin requires specific permission scopes to be granted in your agent configuration:
+
+- **`image:read`** - Required for image analysis capabilities
+- **`image:write`** - Required for image transformation and format conversion capabilities
+
+Make sure your agent is configured with the necessary scopes to use these features.
+
 ## Features
 
 - **Image Analysis**: Extract metadata, dimensions, color information, and visual characteristics
@@ -91,6 +100,8 @@ Testing text-only request...
 The vehicle model shown in the image is a Land Rover Defender. This model is known for its rugged design and off-road capabilities.
 --------------------------------------------------
 ```
+
+**Remember to replace the API key in the script with your own.**
 
 ### Image Analysis
 
@@ -194,6 +205,15 @@ Converts images between different formats.
 ### Plugin Configuration
 
 ```yaml
+plugins:
+  - plugin_id: image-vision
+    name: Image Processing
+    description: Process and analyze images
+    tags: [image, processing, analysis]
+    input_mode: multimodal
+    output_mode: text
+    priority: 85
+
 services:
   image_vision:
     type: plugin
@@ -212,6 +232,25 @@ services:
 
       # Default thumbnail size [width, height]
       default_thumbnail_size: [200, 200]
+```
+
+### Required Scopes by Capability
+
+Each image processing capability requires specific permission scopes:
+
+| Capability | Required Scope | Description |
+|------------|----------------|-------------|
+| `analyze_image` | `image:read` | Analyze uploaded images and extract metadata |
+| `transform_image` | `image:write` | Transform images (resize, rotate, flip, filters) |
+| `convert_image_format` | `image:write` | Convert images between different formats |
+
+Configure your agent with the appropriate scopes in `agent_config.yaml`:
+
+```yaml
+security:
+  scopes:
+    - image:read      # For image analysis
+    - image:write     # For image transformation and conversion
 ```
 
 ### Configuration Options

@@ -13,9 +13,9 @@ from agent.plugins import (
     AIFunction,
     CapabilityType,
     CapabilityContext,
-    CapabilityInfo,
+    PluginDefinition,
     CapabilityResult,
-    ValidationResult,
+    PluginValidationResult,
 )
 
 from .processor import ImageProcessor
@@ -26,7 +26,7 @@ logger = structlog.get_logger(__name__)
 hookimpl = pluggy.HookimplMarker("agentup")
 
 
-# Image processing capabilities configuration
+# Image processing capabilities configuration with required scopes
 CAPABILITIES_CONFIG = [
     {
         "id": "analyze_image",
@@ -36,6 +36,7 @@ CAPABILITIES_CONFIG = [
         "input_mode": "multimodal",
         "output_mode": "text",
         "tags": ["image", "analysis", "metadata", "multimodal"],
+        "required_scopes": ["image:read"],  # Plugin DECLARES scope requirement
         "ai_function": {
             "name": "analyze_image",
             "description": "Analyze an uploaded image and return detailed insights including metadata, dimensions, and visual characteristics",
@@ -60,6 +61,7 @@ CAPABILITIES_CONFIG = [
         "input_mode": "multimodal",
         "output_mode": "text",
         "tags": ["image", "transformation", "resize", "rotate", "filter", "multimodal"],
+        "required_scopes": ["image:write"],  # Plugin DECLARES scope requirement
         "ai_function": {
             "name": "transform_image",
             "description": "Transform images with various operations like resize, rotate, flip, and apply filters",
@@ -110,6 +112,7 @@ CAPABILITIES_CONFIG = [
         "input_mode": "multimodal",
         "output_mode": "text",
         "tags": ["image", "conversion", "format", "multimodal"],
+        "required_scopes": ["image:write"],  # Plugin DECLARES scope requirement
         "ai_function": {
             "name": "convert_image_format",
             "description": "Convert images between different formats (PNG, JPEG, WebP, etc.)",
@@ -150,7 +153,7 @@ class ImageProcessingPlugin:
         """Initialize the image processing plugin."""
         self.processor = ImageProcessor()
         self.config = {}
-        
+
         # Build handler mapping from configuration
         self._handlers = {
             config["id"]: self._create_capability_handler(config["id"])
@@ -183,9 +186,9 @@ class ImageProcessingPlugin:
             }
         }
 
-    def _create_capability_info(self, config: dict) -> CapabilityInfo:
-        """Create a CapabilityInfo object from configuration."""
-        return CapabilityInfo(
+    def _create_capability_info(self, config: dict) -> PluginDefinition:
+        """Create a PluginDefinition object from configuration."""
+        return PluginDefinition(
             id=config["id"],
             name=config["name"],
             version="1.0.0",
@@ -195,7 +198,8 @@ class ImageProcessingPlugin:
             input_mode=config.get("input_mode"),
             output_mode=config.get("output_mode"),
             tags=config["tags"],
-            config_schema=self._create_base_config_schema()
+            config_schema=self._create_base_config_schema(),
+            required_scopes=config.get("required_scopes", [])  # Plugin DECLARES scope requirement
         )
 
     def _create_capability_handler(self, capability_id: str):
@@ -208,7 +212,7 @@ class ImageProcessingPlugin:
         return handler_map[capability_id]
 
     @hookimpl
-    def register_capability(self) -> list[CapabilityInfo]:
+    def register_capability(self) -> list[PluginDefinition]:
         """Register the image processing capabilities."""
         return [self._create_capability_info(config) for config in CAPABILITIES_CONFIG]
 
@@ -269,7 +273,7 @@ class ImageProcessingPlugin:
         try:
             # Get the specific capability being invoked
             capability_id = context.metadata.get("capability_id", "unknown")
-            
+
             # Route to specific capability handler using the handlers mapping
             if capability_id in self._handlers:
                 handler = self._handlers[capability_id]
@@ -339,7 +343,7 @@ class ImageProcessingPlugin:
             "transform_image": self._handle_transform_image,
             "convert_image_format": self._handle_convert_image,
         }
-        
+
         return AIFunction(
             name=ai_func_config["name"],
             description=ai_func_config["description"],
@@ -356,12 +360,12 @@ class ImageProcessingPlugin:
             if config:
                 return [self._create_ai_function(config)]
             return []
-        
+
         # Return all functions (for backward compatibility)
         return [self._create_ai_function(config) for config in CAPABILITIES_CONFIG]
 
     @hookimpl
-    def validate_config(self, config: dict) -> ValidationResult:
+    def validate_config(self, config: dict) -> PluginValidationResult:
         """Validate plugin configuration."""
         errors = []
         warnings = []
@@ -394,7 +398,7 @@ class ImageProcessingPlugin:
         elif not all(isinstance(x, int) and x > 0 for x in thumbnail_size):
             errors.append("default_thumbnail_size values must be positive integers")
 
-        return ValidationResult(
+        return PluginValidationResult(
             valid=len(errors) == 0, errors=errors, warnings=warnings
         )
 
@@ -439,7 +443,7 @@ class ImageProcessingPlugin:
     def _extract_image_from_context(self, context: CapabilityContext) -> tuple[dict | None, str]:
         """Extract image data from context. Returns (image_part, user_input) or (None, error_msg)."""
         user_input = self._extract_user_input(context)
-        
+
         # Extract images from the task
         if not hasattr(context.task, "history") or not context.task.history:
             return None, "Error: No message history found. Please provide an image to process."
@@ -458,7 +462,7 @@ class ImageProcessingPlugin:
         image_part = image_parts[0]
         if not image_part["data"]:
             return None, "Error: No image data found. Images must be embedded as base64 data."
-            
+
         return image_part, user_input
 
     def _analyze_image(self, image_part: dict, user_input: str) -> CapabilityResult:

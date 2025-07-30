@@ -1,6 +1,6 @@
 [project]
 name = "image-vision"
-version = "0.2.0"
+version = "0.4.0"
 description = "Image processing and analysis plugin for AgentUp framework"
 readme = "README.md"
 authors = [
@@ -8,11 +8,12 @@ authors = [
 ]
 requires-python = ">=3.11"
 dependencies = [
-    "agentup>=0.1.0",
+    "agentup>=0.4.0",
     "pluggy>=1.5.0",
     "Pillow>=9.0.0",
     "numpy>=1.21.0",
     "structlog>=21.1.0",
+    "build>=1.2.2.post1",
 ]
 keywords = ["agentup", "plugin", "image", "processing", "analysis", "transformation"]
 classifiers = [
