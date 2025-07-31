@@ -13,7 +13,7 @@ from agent.plugins import (
     AIFunction,
     CapabilityType,
     CapabilityContext,
-    PluginDefinition,
+    CapabilityDefinition,
     CapabilityResult,
     PluginValidationResult,
 )
@@ -186,9 +186,9 @@ class ImageProcessingPlugin:
             }
         }
 
-    def _create_capability_info(self, config: dict) -> PluginDefinition:
-        """Create a PluginDefinition object from configuration."""
-        return PluginDefinition(
+    def _create_capability_info(self, config: dict) -> CapabilityDefinition:
+        """Create a CapabilityDefinition object from configuration."""
+        return CapabilityDefinition(
             id=config["id"],
             name=config["name"],
             version="1.0.0",
@@ -212,7 +212,7 @@ class ImageProcessingPlugin:
         return handler_map[capability_id]
 
     @hookimpl
-    def register_capability(self) -> list[PluginDefinition]:
+    def register_capability(self) -> list[CapabilityDefinition]:
         """Register the image processing capabilities."""
         return [self._create_capability_info(config) for config in CAPABILITIES_CONFIG]
 

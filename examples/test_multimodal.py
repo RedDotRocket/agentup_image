@@ -90,7 +90,7 @@ def test_multimodal(image_path, prompt="What do you see in this image? Please de
     # Your API key from agent_config.yaml
     headers = {
         "Content-Type": "application/json",
-        "X-API-Key": "Ja7Ha0GVQRbz4wGqcRuWfOcP-PekNleo"
+        "X-API-Key": "admin-key-123"
     }
 
     # Send request
