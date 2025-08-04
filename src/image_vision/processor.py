@@ -44,13 +44,16 @@ class ImageProcessor:
             # Images should be FilePart according to A2A spec
             if hasattr(part, "root") and part.root.kind == "file":
                 file_part = part.root
-                if file_part.file.mimeType and file_part.file.mimeType.startswith(
-                    "image/"
-                ):
+                # Get mime type using the proper attribute (prefer snake_case over camelCase)
+                mime_type = getattr(file_part.file, "mime_type", None) or getattr(
+                    file_part.file, "mimeType", None
+                )
+
+                if mime_type and mime_type.startswith("image/"):
                     # Return dict with file info for easier processing
                     image_info = {
                         "name": file_part.file.name or "image",
-                        "mimeType": file_part.file.mimeType,
+                        "mimeType": mime_type,
                         "data": file_part.file.bytes
                         if hasattr(file_part.file, "bytes")
                         else None,
@@ -73,18 +76,20 @@ class ImageProcessor:
             # Check FilePart (for images)
             if hasattr(part, "root") and part.root.kind == "file":
                 file_part = part.root
-                if file_part.file.mimeType and file_part.file.mimeType.startswith(
-                    mime_type_prefix
-                ):
+                # Get mime type using the proper attribute (prefer snake_case over camelCase)
+                mime_type = getattr(file_part.file, "mime_type", None) or getattr(
+                    file_part.file, "mimeType", None
+                )
+                if mime_type and mime_type.startswith(mime_type_prefix):
                     matching_parts.append(part)
             # Check DataPart (for structured data)
             elif hasattr(part, "root") and part.root.kind == "data":
                 data_part = part.root
-                if (
-                    hasattr(data_part, "mimeType")
-                    and data_part.mimeType
-                    and data_part.mimeType.startswith(mime_type_prefix)
-                ):
+                # Get mime type using the proper attribute (prefer snake_case over camelCase)
+                mime_type = getattr(data_part, "mime_type", None) or getattr(
+                    data_part, "mimeType", None
+                )
+                if mime_type and mime_type.startswith(mime_type_prefix):
                     matching_parts.append(part)
 
         return matching_parts
@@ -248,12 +253,15 @@ class ImageProcessor:
         for part in parts:
             if hasattr(part, "root") and part.root.kind == "file":
                 file_part = part.root
-                if file_part.file.mimeType and file_part.file.mimeType.startswith(
-                    "image/"
-                ):
+                # Get mime type using the proper attribute (prefer snake_case over camelCase)
+                mime_type = getattr(file_part.file, "mime_type", None) or getattr(
+                    file_part.file, "mimeType", None
+                )
+
+                if mime_type and mime_type.startswith("image/"):
                     image_info = {
                         "name": file_part.file.name or "image",
-                        "mime_type": file_part.file.mimeType,
+                        "mime_type": mime_type,
                         "data": file_part.file.bytes
                         if hasattr(file_part.file, "bytes")
                         else None,

@@ -672,7 +672,7 @@ dependencies = [
     { name = "build" },
     { name = "numpy" },
     { name = "pillow" },
-    { name = "pluggy" },
+    { name = "requests" },
     { name = "structlog" },
 ]
 
@@ -694,10 +694,10 @@ requires-dist = [
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.0.0" },
     { name = "numpy", specifier = ">=1.21.0" },
     { name = "pillow", specifier = ">=9.0.0" },
-    { name = "pluggy", specifier = ">=1.5.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.21.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },
+    { name = "requests", specifier = ">=2.32.4" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
     { name = "structlog", specifier = ">=21.1.0" },
 ]

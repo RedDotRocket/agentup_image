@@ -58,17 +58,34 @@ pip install image-vision
 
 ### 2. Configure Your Agent
 
+The `agentup plugin list` command will automatically inform you about the required scopes for this plugin.
+
+```bash
+
+```
 Add the plugin to your agent's configuration in `agent_config.yaml`:
 
 ```yaml
+# Agent Plugin Configuration
 plugins:
-  - plugin_id: image-vision
-    name: Image Processing
-    description: Process and analyze images
-    tags: [image, processing, analysis]
-    input_mode: multimodal
-    output_mode: text
-    priority: 85
+  - plugin_id: image_vision
+    package: image-vision
+    name: Image Agent Plugin
+    description: A plugin for Image Agent
+    tags: [image agent, plugin]
+    input_mode: text
+    output_mode: multimodal
+    priority: 50
+    capabilities:
+      - capability_id: analyze_image
+        required_scopes: ["image:read"]
+        enabled: true
+      - capability_id: convert_image_format
+        required_scopes: ["image:write"]
+        enabled: true
+      - capability_id: transform_image
+        required_scopes: ["image:write"]
+        enabled: true
 ```
 
 ### 3. Use in Your Agent
